@@ -83,28 +83,41 @@ impl App {
         move_up_all_but_first(&self.snake_body,&mut new_snake_body);
         match press_args{
             input::Button::Keyboard(key)=>if key==input::keyboard::Key::Right{
-                new_snake_body[0].0=self.snake_body[0].0+snake_width;
-                new_snake_body[0].1=self.snake_body[0].1;
-                self.direction="right";
-                self.last_auto_move_time=time::now();
+                    if !(self.direction=="left"){
+                        new_snake_body[0].0=self.snake_body[0].0+snake_width;
+                        new_snake_body[0].1=self.snake_body[0].1;
+                        self.direction="right";
+                    }else{
+                        return ()
+                    }
                 }else if key==input::keyboard::Key::Left{
-                    new_snake_body[0].0=self.snake_body[0].0-snake_width;
-                    new_snake_body[0].1=self.snake_body[0].1;
-                    self.direction="left";
-                    self.last_auto_move_time=time::now();
+                    if !(self.direction=="right"){
+                        new_snake_body[0].0=self.snake_body[0].0-snake_width;
+                        new_snake_body[0].1=self.snake_body[0].1;
+                        self.direction="left";
+                    }else{
+                        return ()
+                    }
                     }else if key==input::keyboard::Key::Up{
-                        new_snake_body[0].1=self.snake_body[0].1-snake_width;
-                        new_snake_body[0].0=self.snake_body[0].0;
-                        self.direction="up";
-                        self.last_auto_move_time=time::now();
-                        }else if key==input::keyboard::Key::Down{
-                            new_snake_body[0].1=self.snake_body[0].1+snake_width;
+                        if !(self.direction=="down"){
+                            new_snake_body[0].1=self.snake_body[0].1-snake_width;
                             new_snake_body[0].0=self.snake_body[0].0;
-                            self.direction="down";
-                            self.last_auto_move_time=time::now();
+                            self.direction="up";
+                        }else{
+                            return ()
+                        }
+                        }else if key==input::keyboard::Key::Down{
+                            if !(self.direction=="up"){
+                                new_snake_body[0].1=self.snake_body[0].1+snake_width;
+                                new_snake_body[0].0=self.snake_body[0].0;
+                                self.direction="down";
+                            }else{
+                                return ()
+                            }
                             },
             input::Button::Mouse(key)=>println!("{:?}",key)
         }
+        self.last_auto_move_time=time::now();
         self.snake_body=new_snake_body;
     }
 

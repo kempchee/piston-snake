@@ -1,0 +1,14 @@
+[package]
+name = "first_piston"
+version = "0.1.0"
+authors = ["kempchee <fotingkempchee@gmail.com>"]
+
+
+[dependencies]
+piston = "*"
+piston2d-graphics = "*"
+pistoncore-glutin_window = "*"
+piston2d-opengl_graphics = "*"
+pistoncore-input="*"
+rand="*"
+time="*"

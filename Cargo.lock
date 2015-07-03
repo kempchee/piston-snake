@@ -2,9 +2,10 @@
 name = "first_piston"
 version = "0.1.0"
 dependencies = [
+ "conrod 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-graphics 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-opengl_graphics 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-graphics 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-opengl_graphics 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pistoncore-glutin_window 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pistoncore-input 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -54,6 +55,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "clock_ticks"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "cocoa"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -61,6 +70,23 @@ dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "objc 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "conrod"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "bitflags 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clock_ticks 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "elmesque 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "json_io 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-graphics 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vecmath 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -103,6 +129,18 @@ version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "elmesque"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "num 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-graphics 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vecmath 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -241,6 +279,14 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "json_io"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "kernel32-sys"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -352,7 +398,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "piston-texture"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -365,13 +411,13 @@ dependencies = [
 
 [[package]]
 name = "piston2d-graphics"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "draw_state 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "interpolation 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston-texture 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston-texture 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston-viewport 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "read_color 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vecmath 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -379,7 +425,7 @@ dependencies = [
 
 [[package]]
 name = "piston2d-opengl_graphics"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "freetype-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -388,8 +434,8 @@ dependencies = [
  "khronos_api 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston-shaders_graphics2d 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston-texture 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-graphics 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston-texture 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-graphics 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "shader_version 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

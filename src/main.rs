@@ -4,6 +4,7 @@ extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate rand;
 extern crate time;
+extern crate conrod;
 
 use piston::window::WindowSettings;
 use piston::event::*;
@@ -11,6 +12,9 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
 use piston::input;
 use rand::distributions::{IndependentSample, Range};
+use std::path::Path;
+use graphics::character::CharacterCache;
+use conrod::{Background, Button, color, Colorable, Labelable, Sizeable, Theme, Ui, Widget};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -21,19 +25,39 @@ pub struct App {
     last_auto_move_time:time::Tm,
     food_location:(f64,f64),
     window_dimension:u32,
-    previous_tail:(f64,f64)
+    previous_tail:(f64,f64),
+    current_screen:&'static str
 }
 
-fn generate_random_ordered_pair(grid_length:f64)->(f64,f64){
+fn compare_ordered_pairs(a:(f64,f64),b:(f64,f64))->bool{
+    let a_x=(a.0) as i64;
+    let a_y=(a.1) as i64;
+    let b_x=(b.0) as i64;
+    let b_y=(b.1) as i64;
+    (a_x,a_y)==(b_x,b_y)
+}
+
+fn generate_random_ordered_pair(grid_length:f64,snake_body:&Vec<(f64,f64)>,window_dimension:u32)->(f64,f64){
     println!("{:?}",grid_length);
     let between = Range::new(0, grid_length as i64);
     let mut rng = rand::thread_rng();
     let mut sum = 0;
     let mut tuple=(0.0,0.0);
-    tuple.0=(between.ind_sample(&mut rng) as f64)/grid_length;
-    tuple.1=(between.ind_sample(&mut rng) as f64)/grid_length;
-    println!("{:?}",tuple);
-    tuple
+    tuple.0=((between.ind_sample(&mut rng) as f64)/grid_length)*(window_dimension as f64);
+    tuple.1=((between.ind_sample(&mut rng) as f64)/grid_length)*(window_dimension as f64);
+    let mut under_snake_body=false;
+    for ordered_pair in snake_body.iter(){
+        if compare_ordered_pairs(tuple,*ordered_pair){
+            under_snake_body=true;
+            break;
+        }
+    }
+    if under_snake_body{
+        generate_random_ordered_pair(grid_length,snake_body,window_dimension)
+    }else{
+        tuple
+    }
+
 }
 
 fn move_up_all_but_first(old_vec:&Vec<(f64,f64)>,new_vec:&mut Vec<(f64,f64)>)->(){
@@ -47,7 +71,8 @@ fn move_up_all_but_first(old_vec:&Vec<(f64,f64)>,new_vec:&mut Vec<(f64,f64)>)->(
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
+
+    fn render_game(&mut self, args: &RenderArgs){
         use graphics::*;
 
         self.auto_move();
@@ -60,6 +85,7 @@ impl App {
         let rotation = self.rotation;
         let snake_body=&self.snake_body;
         let food_location=self.food_location;
+        println!("{:?}",self.food_location);
         let window_dimension=self.window_dimension;
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
@@ -69,24 +95,67 @@ impl App {
                 // Draw a box rotating around the middle of the screen.
                 rectangle(RED, square, transform, gl);
             }
-            let food_transform=c.transform.trans(food_location.0*(window_dimension as f64),food_location.1*(window_dimension as f64));
+            let food_transform=c.transform.trans(food_location.0,food_location.1);
             ellipse(RED, food_ellipse, food_transform, gl);
+
+        });
+    }
+
+    fn render(&mut self, args: &RenderArgs,ui:&mut conrod::Ui<opengl_graphics::glyph_cache::GlyphCache>) {
+        println!("{:?}",self.current_screen);
+        if self.current_screen=="game_screen"{
+            self.render_game(args)
+        }else if self.current_screen=="start_screen"{
+            self.render_start_screen(args,ui)
+        }
+    }
+
+    fn render_start_screen(&mut self, args: &RenderArgs,ui:&mut conrod::Ui<opengl_graphics::glyph_cache::GlyphCache>){
+        use graphics::*;
+        const BLACK: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+        const GREY:   [f32; 4] = [0.5, 0.5, 0.5, 1.0];
+        let window_dimension=self.window_dimension as f64;
+        let current_screen=&mut self.current_screen;
+        self.gl.draw(args.viewport(), |c, gl| {
+            // Clear the screen.
+            clear(GREY, gl);
+
+            let header_font_size=32;
+            let header_text_string="Welcome to Snake";
+            let mut header_text=graphics::text::Text::new(header_font_size);
+            let mut font=opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/Hanken-Book.ttf")).unwrap();
+            let header_text_width=font.width(header_font_size,header_text_string);
+            header_text.draw("Welcome to Snake",
+                &mut font,
+                &graphics::DrawState::new(),
+                c.transform.trans((window_dimension-header_text_width)/2.0,50.0),
+                gl);
+                Button::new()
+                        .color(conrod::color::red())
+                        .dimensions(120.0, 40.0)
+                        .label("Start Game")
+                        .react(|| *current_screen="game_screen")
+                        .set(0, ui);
+            ui.draw(c,gl);
 
         });
     }
 
 
     fn move_square(&mut self,press_args:input::Button)->(){
+        println!("move_square");
         self.previous_tail=self.snake_body[self.snake_body.len()-1];
         let snake_width=self.snake_width;
         let mut new_snake_body=vec![];
         move_up_all_but_first(&self.snake_body,&mut new_snake_body);
         match press_args{
-            input::Button::Keyboard(key)=>if key==input::keyboard::Key::Right{
+            input::Button::Keyboard(key)=>{if key==input::keyboard::Key::Right{
                     if !(self.direction=="left"){
                         new_snake_body[0].0=self.snake_body[0].0+snake_width;
                         new_snake_body[0].1=self.snake_body[0].1;
                         self.direction="right";
+                        self.last_auto_move_time=time::now();
+                        self.snake_body=new_snake_body;
                     }else{
                         return ()
                     }
@@ -95,6 +164,8 @@ impl App {
                         new_snake_body[0].0=self.snake_body[0].0-snake_width;
                         new_snake_body[0].1=self.snake_body[0].1;
                         self.direction="left";
+                        self.last_auto_move_time=time::now();
+                        self.snake_body=new_snake_body;
                     }else{
                         return ()
                     }
@@ -103,6 +174,8 @@ impl App {
                             new_snake_body[0].1=self.snake_body[0].1-snake_width;
                             new_snake_body[0].0=self.snake_body[0].0;
                             self.direction="up";
+                            self.last_auto_move_time=time::now();
+                            self.snake_body=new_snake_body;
                         }else{
                             return ()
                         }
@@ -111,24 +184,31 @@ impl App {
                                 new_snake_body[0].1=self.snake_body[0].1+snake_width;
                                 new_snake_body[0].0=self.snake_body[0].0;
                                 self.direction="down";
+                                self.last_auto_move_time=time::now();
+                                self.snake_body=new_snake_body;
                             }else{
                                 return ()
                             }
-                            },
+                        }
+            },
             input::Button::Mouse(key)=>println!("{:?}",key)
         }
-        self.last_auto_move_time=time::now();
-        self.snake_body=new_snake_body;
+
     }
 
     fn game_over(&mut self,r:RenderArgs)->bool{
-        let mut game_over=false;
-        for tuple in self.snake_body.iter(){
-            if tuple.0+self.snake_width>r.width as f64||tuple.0<0.0||tuple.1+self.snake_width>r.height as f64||tuple.1<0.0{
-                return true
+        let snake_head=self.snake_body[0];
+        if snake_head.0+self.snake_width>r.width as f64||snake_head.0<0.0||snake_head.1+self.snake_width>r.height as f64||snake_head.1<0.0{
+            return true
+        }
+        for (i,tuple) in self.snake_body.iter().enumerate(){
+            if i!=0{
+                if compare_ordered_pairs(snake_head,*tuple){
+                    return true
+                }
             }
         }
-        game_over
+        false
     }
 
     fn auto_move(&mut self)->(){
@@ -155,12 +235,9 @@ impl App {
     }
 
     fn eat_food(&mut self)->(){
-        let food_x=(self.food_location.0*(self.window_dimension as f64)) as i64;
-        let food_y=(self.food_location.1*(self.window_dimension as f64)) as i64;
-        let snake_x=(self.snake_body[0].0) as i64;
-        let snake_y=(self.snake_body[0].1) as i64;
-        if (food_x,food_y)==(snake_x,snake_y){
-            self.food_location=generate_random_ordered_pair((self.window_dimension as f64)/self.snake_width);
+        if compare_ordered_pairs(self.food_location,self.snake_body[0]){
+            println!("eat_food");
+            self.food_location=generate_random_ordered_pair((self.window_dimension as f64)/self.snake_width,&self.snake_body,self.window_dimension);
             match self.direction{
                 "up"=>self.snake_body.push(self.previous_tail),
                 "down"=>self.snake_body.push(self.previous_tail),
@@ -178,8 +255,8 @@ impl App {
 //RenderArgs { ext_dt: 0.000002581, width: 200, height: 200, draw_width: 200, draw_height: 200 }
 fn main() {
     let opengl = OpenGL::_3_2;
-    let window_dimension=200;
-    let snake_width=10.0;
+    let window_dimension=600;
+    let snake_width=15.0;
     // Create an Glutin window.
     let window = Window::new(
         WindowSettings::new(
@@ -199,11 +276,15 @@ fn main() {
         snake_body:vec![(0.0,0.0)],
         direction:"down",
         last_auto_move_time:time::now(),
-        food_location:generate_random_ordered_pair((window_dimension as f64)/snake_width),
-        previous_tail:(0.0,0.0)
+        food_location:generate_random_ordered_pair((window_dimension as f64)/snake_width,&vec![(0.0,0.0)],window_dimension),
+        previous_tail:(0.0,0.0),
+        current_screen:"start_screen"
     };
+
+    let ui=&mut conrod::Ui::new(opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/Hanken-Book.ttf")).unwrap(),conrod::Theme::default());
     println!("{:?}",time::now());
     for e in window.events() {
+        ui.handle_event(&e);
         match e.press_args(){
             Some(press_args)=>app.move_square(press_args),
             None=>()
@@ -211,12 +292,12 @@ fn main() {
         //println!("{:?}",e.render_args());
         //println!("{:?}",e.update_args());
         if let Some(r) = e.render_args() {
-            if app.game_over(r){
-                println!("{:?}","You Lose!");
-                println!("{:?}",r);
-                break;
-            }
-          app.render(&r);
+          app.render(&r,ui);
+          if app.game_over(r){
+              println!("{:?}","You Lose!");
+              println!("{:?}",r);
+              break;
+          }
         }
 
         //if let Some(u) = e.update_args() {

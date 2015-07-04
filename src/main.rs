@@ -14,7 +14,8 @@ use piston::input;
 use rand::distributions::{IndependentSample, Range};
 use std::path::Path;
 use graphics::character::CharacterCache;
-use conrod::{Background, Button, color, Colorable, Labelable, Sizeable, Theme, Ui, Widget};
+use conrod::{Background, Button,CanvasId,DropDownList, Floating, Label, Labelable,Positionable, Sizeable, Theme, Ui,UiId, Widget,WidgetId,Split};
+use conrod::color::*;
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -26,7 +27,8 @@ pub struct App {
     food_location:(f64,f64),
     window_dimension:u32,
     previous_tail:(f64,f64),
-    current_screen:&'static str
+    current_screen:&'static str,
+    difficulty:usize
 }
 
 fn compare_ordered_pairs(a:(f64,f64),b:(f64,f64))->bool{
@@ -102,7 +104,6 @@ impl App {
     }
 
     fn render(&mut self, args: &RenderArgs,ui:&mut conrod::Ui<opengl_graphics::glyph_cache::GlyphCache>) {
-        println!("{:?}",self.current_screen);
         if self.current_screen=="game_screen"{
             self.render_game(args)
         }else if self.current_screen=="start_screen"{
@@ -116,26 +117,50 @@ impl App {
         const GREY:   [f32; 4] = [0.5, 0.5, 0.5, 1.0];
         let window_dimension=self.window_dimension as f64;
         let current_screen=&mut self.current_screen;
+        let last_auto_move_time=&mut self.last_auto_move_time;
+        let mut difficulty=&mut self.difficulty;
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREY, gl);
+            let mut font=opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/leaguegothic-regular-webfont.ttf")).unwrap();
+            Split::new(MASTER).flow_down(&[
+                Split::new(HEADER).color(light_green()),
+                Split::new(BODY).color(blue()).length(window_dimension*0.75).pad_top(20.0),
+            ]).set(ui);
+            let dropdown_container=Floating::new();
+            dropdown_container.label("Difficulty")
+                .width(400.0)
+                .show_title_bar(false)
+                .mid_top_of(BODY)
+                .color(grey())
+                .pad_left(20.0)
+                .set(DROPDOWNCONTAINER, ui);
+            Label::new("Welcome To Snake").color(dark_orange()).font_size(48).middle_of(HEADER).set(TITLE, ui);
 
-            let header_font_size=32;
-            let header_text_string="Welcome to Snake";
-            let mut header_text=graphics::text::Text::new(header_font_size);
-            let mut font=opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/Hanken-Book.ttf")).unwrap();
-            let header_text_width=font.width(header_font_size,header_text_string);
-            header_text.draw("Welcome to Snake",
-                &mut font,
-                &graphics::DrawState::new(),
-                c.transform.trans((window_dimension-header_text_width)/2.0,50.0),
-                gl);
-                Button::new()
+
+            DropDownList::new(&mut vec!["Easy".to_string(),"Medium".to_string(),"Hard".to_string()],&mut Some(*difficulty))
+                .enabled(true)
+                .middle_of(DROPDOWNCONTAINER)
+                .dimensions(120.0, 40.0)
+                .react(|selected_idx: &mut Option<usize>, new_idx, string| {
+                    *difficulty = new_idx;
+                    *selected_idx = Some(new_idx);
+                    })
+                .set(DROPDOWN,ui);
+            Label::new("Difficulty").color(dark_orange()).font_size(24).middle_of(HEADER).mid_left_of(DROPDOWNCONTAINER).set(DROPDOWNLABEL, ui);
+
+            Button::new()
                         .color(conrod::color::red())
-                        .dimensions(120.0, 40.0)
+                        .dimensions(120.0, 60.0)
                         .label("Start Game")
-                        .react(|| *current_screen="game_screen")
-                        .set(0, ui);
+                        .react(|| {
+                            println!("hi");
+                            *current_screen="game_screen";
+                            *last_auto_move_time=time::now();
+                        })
+                        .middle_of(BODY)
+                        .set(STARTBUTTON, ui);
+
             ui.draw(c,gl);
 
         });
@@ -214,7 +239,13 @@ impl App {
     fn auto_move(&mut self)->(){
         let elapsed=time::now()-self.last_auto_move_time;
         let snake_width=self.snake_width;
-        if elapsed>time::Duration::seconds(1){
+        let duration_threshold=match self.difficulty{
+            0=>time::Duration::milliseconds(1000),
+            1=>time::Duration::milliseconds(500),
+            2=>time::Duration::milliseconds(250),
+            _=>time::Duration::milliseconds(1000)
+        };
+        if elapsed>duration_threshold{
             println!("{:?}","Automove");
             self.previous_tail=self.snake_body[self.snake_body.len()-1];
             self.last_auto_move_time=time::now();
@@ -278,11 +309,11 @@ fn main() {
         last_auto_move_time:time::now(),
         food_location:generate_random_ordered_pair((window_dimension as f64)/snake_width,&vec![(0.0,0.0)],window_dimension),
         previous_tail:(0.0,0.0),
-        current_screen:"start_screen"
+        current_screen:"start_screen",
+        difficulty:0
     };
 
-    let ui=&mut conrod::Ui::new(opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/Hanken-Book.ttf")).unwrap(),conrod::Theme::default());
-    println!("{:?}",time::now());
+    let ui=&mut conrod::Ui::new(opengl_graphics::glyph_cache::GlyphCache::new(Path::new("fonts/leaguegothic-regular-webfont.ttf")).unwrap(),conrod::Theme::default());
     for e in window.events() {
         ui.handle_event(&e);
         match e.press_args(){
@@ -304,6 +335,15 @@ fn main() {
         //    app.update(&u);
         //}
     }
-
-
 }
+
+const MASTER: CanvasId = 0;
+const HEADER: CanvasId = MASTER + 1;
+const BODY: CanvasId = HEADER + 1;
+const DROPDOWNCONTAINER: CanvasId = BODY + 1;
+
+const TITLE: WidgetId = 0;
+const SUBTITLE: WidgetId = TITLE + 1;
+const STARTBUTTON: WidgetId = SUBTITLE + 1;
+const DROPDOWN: WidgetId = STARTBUTTON + 1;
+const DROPDOWNLABEL: WidgetId = DROPDOWN + 1;

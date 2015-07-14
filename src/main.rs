@@ -5,6 +5,7 @@ extern crate opengl_graphics;
 extern crate rand;
 extern crate time;
 extern crate conrod;
+extern crate postgres;
 
 use piston::window::WindowSettings;
 use piston::event::*;
@@ -13,9 +14,10 @@ use opengl_graphics::{ GlGraphics, OpenGL };
 use piston::input;
 use rand::distributions::{IndependentSample, Range};
 use std::path::Path;
-use graphics::character::CharacterCache;
+use graphics::*;
 use conrod::{Background, Button,CanvasId,DropDownList, Floating, Label, Labelable,Positionable, Sizeable, Theme, Ui,UiId, Widget,WidgetId,Split};
 use conrod::color::*;
+use postgres::{Connection, SslMode};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -75,8 +77,6 @@ fn move_up_all_but_first(old_vec:&Vec<(f64,f64)>,new_vec:&mut Vec<(f64,f64)>)->(
 impl App {
 
     fn render_game(&mut self, args: &RenderArgs){
-        use graphics::*;
-
         self.auto_move();
         self.eat_food();
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
@@ -108,13 +108,12 @@ impl App {
             self.render_game(args)
         }else if self.current_screen=="start_screen"{
             self.render_start_screen(args,ui)
+        }else if self.current_screen=="game_over"{
+            self.render_game_over_screen(args,ui)
         }
     }
 
     fn render_start_screen(&mut self, args: &RenderArgs,ui:&mut conrod::Ui<opengl_graphics::glyph_cache::GlyphCache>){
-        use graphics::*;
-        const BLACK: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const GREY:   [f32; 4] = [0.5, 0.5, 0.5, 1.0];
         let window_dimension=self.window_dimension as f64;
         let current_screen=&mut self.current_screen;
         let last_auto_move_time=&mut self.last_auto_move_time;
@@ -164,6 +163,40 @@ impl App {
             ui.draw(c,gl);
 
         });
+    }
+
+    fn render_game_over_screen(&mut self, args: &RenderArgs,ui:&mut conrod::Ui<opengl_graphics::glyph_cache::GlyphCache>){
+        let window_dimension=self.window_dimension as f64;
+        let current_screen=&mut self.current_screen;
+        let last_auto_move_time=&mut self.last_auto_move_time;
+        let snake_body=&mut self.snake_body;
+        let direction=&mut self.direction;
+        let previous_tail=&mut self.previous_tail;
+        let mut difficulty=&mut self.difficulty;
+        self.gl.draw(args.viewport(), |c, gl| {
+            // Clear the screen.
+            clear(GREY, gl);
+            Split::new(MASTER).flow_down(&[
+                Split::new(HEADER).color(light_green()),
+                Split::new(BODY).color(blue()).length(window_dimension*0.75).pad_top(20.0),
+            ]).set(ui);
+            Label::new("You Lose!").color(red()).font_size(48).middle_of(HEADER).set(TITLE, ui);
+            Button::new()
+                        .color(conrod::color::red())
+                        .dimensions(120.0, 60.0)
+                        .label("Play Again")
+                        .react(|| {
+                            println!("hi");
+                            *current_screen="game_screen";
+                            *snake_body=vec![(0.0,0.0)];
+                            *last_auto_move_time=time::now();
+                            *previous_tail=(0.0,0.0);
+                            *direction="down";
+                        })
+                        .middle_of(BODY)
+                        .set(STARTBUTTON, ui);
+            ui.draw(c,gl);
+        })
     }
 
 
@@ -299,6 +332,10 @@ fn main() {
     );
 
     // Create a new game and run it.
+    let connection= match Connection::connect("postgres://kempchee:kempchee@localhost/piston_snake", &SslMode::None){
+        Ok(connection)=>connection,
+        Err(connect_error)=>panic!()
+    };
     let mut app = App {
         gl: GlGraphics::new(opengl),
         window_dimension:window_dimension,
@@ -317,7 +354,11 @@ fn main() {
     for e in window.events() {
         ui.handle_event(&e);
         match e.press_args(){
-            Some(press_args)=>app.move_square(press_args),
+            Some(press_args)=>{
+                if(app.current_screen=="game_screen"){
+                    app.move_square(press_args)
+                }
+            },
             None=>()
         }
         //println!("{:?}",e.render_args());
@@ -325,9 +366,7 @@ fn main() {
         if let Some(r) = e.render_args() {
           app.render(&r,ui);
           if app.game_over(r){
-              println!("{:?}","You Lose!");
-              println!("{:?}",r);
-              break;
+              app.current_screen="game_over";
           }
         }
 
@@ -347,3 +386,6 @@ const SUBTITLE: WidgetId = TITLE + 1;
 const STARTBUTTON: WidgetId = SUBTITLE + 1;
 const DROPDOWN: WidgetId = STARTBUTTON + 1;
 const DROPDOWNLABEL: WidgetId = DROPDOWN + 1;
+
+const BLACK: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const GREY:   [f32; 4] = [0.5, 0.5, 0.5, 1.0];
